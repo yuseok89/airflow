@@ -166,7 +166,6 @@ export const createChartOptions = ({
     },
     plugins: {
       annotation: {
-        clip: false,
         annotations: [
           // Selected task annotation
           ...(selectedId === undefined || selectedId === "" || hoveredId === selectedId
@@ -199,6 +198,7 @@ export const createChartOptions = ({
                 },
               ]),
         ],
+        clip: false,
       },
       legend: {
         display: false,
