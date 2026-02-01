@@ -1032,7 +1032,7 @@ class TestGoogleCloudStorageToCloudStorageOperator:
         expected = [
             f"gs://{DESTINATION_BUCKET}/foo/bar/file1.txt",
             f"gs://{DESTINATION_BUCKET}/foo/bar/file2.txt",
-            f"gs://{DESTINATION_BUCKET}/foo/bar/file3.json"
+            f"gs://{DESTINATION_BUCKET}/foo/bar/file3.json",
         ]
         assert sorted(result) == sorted(expected)
 

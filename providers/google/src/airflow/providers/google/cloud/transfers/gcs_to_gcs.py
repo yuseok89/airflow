@@ -278,19 +278,16 @@ class GCSToGCSOperator(BaseOperator):
         for prefix in self.source_objects:
             # Check if prefix contains wildcard
             if WILDCARD in prefix:
-                destination_uris_result.extend(
-                    self._copy_source_with_wildcard(hook=hook, prefix=prefix)
-                )
+                destination_uris_result.extend(self._copy_source_with_wildcard(hook=hook, prefix=prefix))
             # Now search with prefix using provided delimiter if any
             else:
-                destination_uris_result.extend(
-                    self._copy_source_without_wildcard(hook=hook, prefix=prefix)
-                )
+                destination_uris_result.extend(self._copy_source_without_wildcard(hook=hook, prefix=prefix))
 
         # Deduplicate while preserving order. Same destination URI can appear when multiple
         # source paths map to one file, e.g. source_objects=["src/foo.png", "src/data/"] with
         # data/ containing foo.png yields backup/list/foo.png twice.
         destination_uris_result = list(dict.fromkeys(destination_uris_result))
+
         # Exclude directory-like URIs (ending with /) from return; copy behavior is unchanged.
         return [u for u in destination_uris_result if not u.endswith("/")]
 
@@ -430,9 +427,7 @@ class GCSToGCSOperator(BaseOperator):
         if len(objects) == 1 and objects[0][-1] != "/":
             result_uris.extend(self._copy_file(hook=hook, source_object=objects[0]))
         elif len(objects):
-            result_uris.extend(
-                self._copy_multiple_objects(hook=hook, source_objects=objects, prefix=prefix)
-            )
+            result_uris.extend(self._copy_multiple_objects(hook=hook, source_objects=objects, prefix=prefix))
         return result_uris
 
     def _copy_file(self, hook, source_object) -> list[str]:
