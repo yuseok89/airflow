@@ -119,12 +119,12 @@ def get_provider_info():
             },
             {
                 "hook-class-name": "airflow.providers.apache.hive.hooks.hive.HiveServer2Hook",
-                "hook-name": "Hive Client Wrapper",
+                "hook-name": "Hive Server 2 Thrift",
                 "connection-type": "hiveserver2",
             },
             {
                 "hook-class-name": "airflow.providers.apache.hive.hooks.hive.HiveMetastoreHook",
-                "hook-name": "Hive Client Wrapper",
+                "hook-name": "Hive Metastore Thrift",
                 "connection-type": "hive_metastore",
             },
         ],

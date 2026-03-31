@@ -44,7 +44,7 @@ def get_provider_info():
         "connection-types": [
             {
                 "hook-class-name": "airflow.providers.apache.pinot.hooks.pinot.PinotDbApiHook",
-                "hook-name": "Pinot Admin",
+                "hook-name": "Pinot Broker",
                 "connection-type": "pinot",
             },
             {

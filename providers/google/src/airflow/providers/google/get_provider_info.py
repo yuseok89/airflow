@@ -1449,7 +1449,7 @@ def get_provider_info():
             },
             {
                 "hook-class-name": "airflow.providers.google.cloud.hooks.cloud_sql.CloudSQLDatabaseHook",
-                "hook-name": "Google Cloud SQL",
+                "hook-name": "Google Cloud SQL Database",
                 "connection-type": "gcpcloudsqldb",
             },
             {

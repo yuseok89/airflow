@@ -1207,7 +1207,7 @@ connection-types:
     hook-name: "Google Cloud SQL"
     connection-type: gcpcloudsql
   - hook-class-name: airflow.providers.google.cloud.hooks.cloud_sql.CloudSQLDatabaseHook
-    hook-name: "Google Cloud SQL"
+    hook-name: "Google Cloud SQL Database"
     connection-type: gcpcloudsqldb
   - hook-class-name: airflow.providers.google.cloud.hooks.bigquery.BigQueryHook
     hook-name: "Google Bigquery"

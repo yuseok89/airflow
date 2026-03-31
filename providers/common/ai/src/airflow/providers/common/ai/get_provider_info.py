@@ -83,7 +83,7 @@ def get_provider_info():
             },
             {
                 "hook-class-name": "airflow.providers.common.ai.hooks.pydantic_ai.PydanticAIAzureHook",
-                "hook-name": "Pydantic AI",
+                "hook-name": "Pydantic AI (Azure OpenAI)",
                 "connection-type": "pydanticai-azure",
                 "ui-field-behaviour": {
                     "hidden-fields": ["schema", "port", "login"],
@@ -105,7 +105,7 @@ def get_provider_info():
             },
             {
                 "hook-class-name": "airflow.providers.common.ai.hooks.pydantic_ai.PydanticAIBedrockHook",
-                "hook-name": "Pydantic AI",
+                "hook-name": "Pydantic AI (AWS Bedrock)",
                 "connection-type": "pydanticai-bedrock",
                 "ui-field-behaviour": {
                     "hidden-fields": ["schema", "port", "login", "host", "password"],
@@ -167,7 +167,7 @@ def get_provider_info():
             },
             {
                 "hook-class-name": "airflow.providers.common.ai.hooks.pydantic_ai.PydanticAIVertexHook",
-                "hook-name": "Pydantic AI",
+                "hook-name": "Pydantic AI (Google Vertex AI)",
                 "connection-type": "pydanticai-vertex",
                 "ui-field-behaviour": {
                     "hidden-fields": ["schema", "port", "login", "host", "password"],

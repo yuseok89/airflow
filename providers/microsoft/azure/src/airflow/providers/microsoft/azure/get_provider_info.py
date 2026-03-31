@@ -788,7 +788,7 @@ def get_provider_info():
             },
             {
                 "hook-class-name": "airflow.providers.microsoft.azure.hooks.data_lake.AzureDataLakeStorageV2Hook",
-                "hook-name": "Azure Data Lake",
+                "hook-name": "Azure Data Lake Storage V2",
                 "connection-type": "adls",
                 "ui-field-behaviour": {
                     "hidden-fields": ["schema", "port"],
