@@ -222,36 +222,15 @@ class HookMetaService:
     @cache
     def hook_meta_data() -> list[ConnectionHookMetaData]:
         pm = ProvidersManager()
-        pm.initialize_providers_hooks()
-
-        widgets = HookMetaService._convert_extra_fields(pm._connection_form_widgets)
-        result: list[ConnectionHookMetaData] = []
-
-        all_conn_types = set(pm._hooks_lazy_dict) | set(pm._hook_provider_dict)
-        for conn_type in sorted(all_conn_types):
-            raw_entry = pm._hooks_lazy_dict._raw_dict.get(conn_type)
-            provider_entry = pm._hook_provider_dict.get(conn_type)
-
-            if isinstance(raw_entry, HookInfo):
-                hook_name = raw_entry.hook_name
-                hook_class_name = raw_entry.hook_class_name
-            elif provider_entry:
-                hook_name = pm._hook_name_dict.get(conn_type, conn_type)
-                hook_class_name = provider_entry.hook_class_name
-            else:
-                hook_name = pm._hook_name_dict.get(conn_type, conn_type)
-                hook_class_name = None
-
-            result.append(
-                ConnectionHookMetaData(
-                    connection_type=conn_type,
-                    hook_class_name=hook_class_name,
-                    default_conn_name=None,
-                    hook_name=hook_name,
-                    standard_fields=HookMetaService._make_standard_fields(
-                        pm._field_behaviours.get(conn_type)
-                    ),
-                    extra_fields=widgets.get(conn_type),
-                )
+        widgets = HookMetaService._convert_extra_fields(pm._connection_form_widgets_from_metadata)
+        return [
+            ConnectionHookMetaData(
+                connection_type=meta.connection_type,
+                hook_class_name=meta.hook_class_name,
+                default_conn_name=None,
+                hook_name=meta.hook_name,
+                standard_fields=HookMetaService._make_standard_fields(meta.field_behaviour),
+                extra_fields=widgets.get(meta.connection_type),
             )
-        return result
+            for meta in pm.iter_connection_type_hook_ui_metadata()
+        ]
