@@ -27,7 +27,7 @@ from airflow.api_fastapi.core_api.datamodels.connections import (
     ConnectionHookMetaData,
     StandardHookFields,
 )
-from airflow.providers_manager import HookInfo
+from airflow.providers_manager import HookInfo, ProvidersManager
 from airflow.serialization.definitions.param import SerializedParam
 
 if TYPE_CHECKING:
@@ -122,8 +122,6 @@ class HookMetaService:
     ]:
         """Get hooks with all details w/o FAB needing to be installed."""
         from unittest import mock
-
-        from airflow.providers_manager import ProvidersManager
 
         def mock_lazy_gettext(txt: str) -> str:
             """Mock for flask_babel.lazy_gettext."""
@@ -223,8 +221,6 @@ class HookMetaService:
     @staticmethod
     @cache
     def hook_meta_data() -> list[ConnectionHookMetaData]:
-        from airflow.providers_manager import ProvidersManager
-
         pm = ProvidersManager()
         pm.initialize_providers_hooks()
 
