@@ -180,6 +180,11 @@ class S3ToGCSOperator(S3ListOperator):
                 'The destination Google Cloud Storage path must end with a slash "/" or be empty.'
             )
 
+    def _destination_uris_for_s3_keys(self, s3_keys: list[str]) -> list[str]:
+        """Build ``gs://`` URIs for each transferred S3 object key."""
+        gcs_bucket, _ = _parse_gcs_url(self.dest_gcs)
+        return [f"gs://{gcs_bucket}/{self.s3_to_gcs_object(s3_object=k)}" for k in s3_keys]
+
     def _get_files(self, context: Context, gcs_hook: GCSHook) -> list[str]:
         # use the super method to list all the files in an S3 bucket/key
         s3_objects = super().execute(context)
@@ -189,7 +194,7 @@ class S3ToGCSOperator(S3ListOperator):
 
         return s3_objects
 
-    def execute(self, context: Context):
+    def execute(self, context: Context) -> list[str]:
         self._check_inputs()
         gcs_hook = GCSHook(
             gcp_conn_id=self.gcp_conn_id,
@@ -206,7 +211,7 @@ class S3ToGCSOperator(S3ListOperator):
         else:
             self.transfer_files(s3_objects, gcs_hook, s3_hook)
 
-        return s3_objects
+        return self._destination_uris_for_s3_keys(s3_objects)
 
     def exclude_existing_objects(self, s3_objects: list[str], gcs_hook: GCSHook) -> list[str]:
         """Excludes from the list objects that already exist in GCS bucket."""
@@ -339,14 +344,17 @@ class S3ToGCSOperator(S3ListOperator):
         """
         Handle the trigger callback when transfer jobs complete.
 
-        Returns the list of copied file paths when available (deferrable mode with
+        Returns the list of destination ``gs://`` URIs for copied objects when available (deferrable mode with
         files passed via trigger), so subsequent tasks can consume them via XCom.
         Returns None when event does not contain files (e.g. legacy triggers).
         """
         if event["status"] == "error":
             raise AirflowException(event["message"])
         self.log.info("%s completed with response %s ", self.task_id, event["message"])
-        return event.get("files")
+        files = event.get("files")
+        if files is None:
+            return None
+        return self._destination_uris_for_s3_keys(files)
 
     def get_transfer_hook(self):
         return CloudDataTransferServiceHook(

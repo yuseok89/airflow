@@ -25,6 +25,7 @@ import time_machine
 
 from airflow.providers.common.compat.sdk import AirflowException, TaskDeferred
 from airflow.providers.google.cloud.hooks.cloud_storage_transfer_service import CloudDataTransferServiceHook
+from airflow.providers.google.cloud.hooks.gcs import _parse_gcs_url
 from airflow.providers.google.cloud.transfers.s3_to_gcs import S3ToGCSOperator
 from airflow.utils.timezone import utcnow
 
@@ -132,8 +133,8 @@ class TestS3ToGoogleCloudStorageOperator:
             impersonation_chain=IMPERSONATION_CHAIN,
         )
 
-        # we expect MOCK_FILES to be uploaded
-        assert sorted(MOCK_FILES) == sorted(uploaded_files)
+        expected_uris = [f"gs://{GCS_BUCKET}/{GCS_PREFIX}{f}" for f in MOCK_FILES]
+        assert sorted(expected_uris) == sorted(uploaded_files)
 
     @mock.patch("airflow.providers.google.cloud.transfers.s3_to_gcs.S3Hook")
     @mock.patch("airflow.providers.google.cloud.transfers.s3_to_gcs.GCSHook")
@@ -264,7 +265,9 @@ class TestS3ToGoogleCloudStorageOperator:
             impersonation_chain=IMPERSONATION_CHAIN,
         )
 
-        assert sorted([s3_prefix + s3_object]) == sorted(uploaded_files)
+        dest_bucket, _ = _parse_gcs_url(gcs_destination)
+        expected_uri = f"gs://{dest_bucket}/{gcs_object}"
+        assert uploaded_files == [expected_uri]
 
     @pytest.mark.parametrize(
         ("s3_prefix", "gcs_destination", "apply_gcs_prefix", "expected_input", "expected_output"),
@@ -499,17 +502,23 @@ class TestS3ToGoogleCloudStorageOperatorDeferrable:
         "airflow.providers.google.cloud.transfers.s3_to_gcs.S3ToGCSOperator.log", new_callable=PropertyMock
     )
     def test_execute_complete_success_returns_copied_files(self, mock_log):
-        """Deferrable mode returns list of copied files for use in subsequent tasks via XCom."""
+        """Deferrable mode returns destination GCS URIs for XCom."""
         expected_files = [MOCK_FILE_1, MOCK_FILE_2]
         event = {
             "status": "success",
             "message": "Transfer completed",
             "files": expected_files,
         }
-        operator = S3ToGCSOperator(task_id=TASK_ID, bucket=S3_BUCKET)
+        operator = S3ToGCSOperator(
+            task_id=TASK_ID,
+            bucket=S3_BUCKET,
+            prefix=S3_PREFIX,
+            dest_gcs=GCS_PATH_PREFIX,
+        )
         result = operator.execute_complete(context={}, event=event)
 
-        assert result == expected_files
+        expected_uris = [f"gs://{GCS_BUCKET}/{GCS_PREFIX}{f}" for f in expected_files]
+        assert result == expected_uris
 
     @mock.patch(
         "airflow.providers.google.cloud.transfers.s3_to_gcs.S3ToGCSOperator.log", new_callable=PropertyMock
