@@ -123,6 +123,28 @@ export class XComsPage extends BasePage {
     }
   }
 
+  public async verifySortByColumn(columnName: string): Promise<void> {
+    await this.navigate();
+
+    const columnHeader = this.xcomsTable.locator("thead th").filter({ hasText: columnName });
+
+    await expect(columnHeader).toBeVisible({ timeout: 10_000 });
+
+    await columnHeader.click();
+    await this.page.waitForLoadState("networkidle");
+
+    const url = this.page.url();
+
+    expect(url).toContain("sorting");
+
+    await columnHeader.click();
+    await this.page.waitForLoadState("networkidle");
+
+    const urlAfterSecondClick = this.page.url();
+
+    expect(urlAfterSecondClick).toContain("sorting");
+  }
+
   public async verifyXComDetailsDisplay(): Promise<void> {
     const firstRow = this.xcomsTable.locator("tbody tr").first();
 
