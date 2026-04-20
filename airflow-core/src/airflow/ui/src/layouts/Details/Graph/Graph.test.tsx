@@ -25,6 +25,8 @@ import { Wrapper } from "src/utils/Wrapper";
 
 import { Graph } from "./Graph";
 
+vi.unmock("src/layouts/Details/Graph/Graph");
+
 let mockParams: Record<string, string> = { dagId: "test_dag" };
 
 vi.mock("react-router-dom", async () => {
