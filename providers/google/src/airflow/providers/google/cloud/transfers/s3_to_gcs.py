@@ -210,6 +210,9 @@ class S3ToGCSOperator(S3ListOperator):
         # use the super method to list all the files in an S3 bucket/key
         s3_objects = super().execute(context)
 
+        # Skip S3 folder-marker keys (``.../``); they overlap sibling keys in Storage Transfer includePrefixes.
+        s3_objects = [obj for obj in s3_objects if not obj.endswith("/")]
+
         if not self.replace:
             s3_objects = self.exclude_existing_objects(s3_objects=s3_objects, gcs_hook=gcs_hook)
 

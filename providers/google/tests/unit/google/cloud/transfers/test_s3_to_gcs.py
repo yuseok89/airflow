@@ -551,6 +551,24 @@ class TestS3ToGoogleCloudStorageOperatorDeferrable:
         mock_create_transfer_job.assert_called()
         assert job_names == expected_job_names
 
+    @mock.patch("airflow.providers.google.cloud.transfers.s3_to_gcs.S3Hook")
+    @mock.patch("airflow.providers.google.cloud.transfers.s3_to_gcs.GCSHook")
+    def test_execute_skips_s3_folder_markers(self, gcs_mock_hook, s3_mock_hook):
+        """Keys ending with ``/`` are omitted (S3 folder markers; break deferrable includePrefixes)."""
+        operator = S3ToGCSOperator(
+            task_id=TASK_ID,
+            bucket=S3_BUCKET,
+            prefix=S3_PREFIX,
+            delimiter=S3_DELIMITER,
+            gcp_conn_id=GCS_CONN_ID,
+            dest_gcs=GCS_PATH_PREFIX,
+            return_gcs_uris=True,
+        )
+        operator.hook = mock.MagicMock()
+        operator.hook.list_keys.return_value = ["test/", "test/airflow.png"]
+
+        assert operator.execute(context={}) == [f"gs://{GCS_BUCKET}/{GCS_PREFIX}test/airflow.png"]
+
     @mock.patch(
         "airflow.providers.google.cloud.transfers.s3_to_gcs.S3ToGCSOperator.log", new_callable=PropertyMock
     )
