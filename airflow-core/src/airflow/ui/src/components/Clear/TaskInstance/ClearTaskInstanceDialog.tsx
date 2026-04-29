@@ -119,16 +119,9 @@ const ClearTaskInstanceDialog = ({ onClose: onCloseDialog, open: openDialog, tas
   useEffect(() => {
     if (!openDialog) {
       userToggledRunOnLatestRef.current = false;
+    } else if (!userToggledRunOnLatestRef.current) {
+      setRunOnLatestVersion(dagVersionsDiffer);
     }
-  }, [openDialog]);
-
-  // Default "run on latest" on when this TI's serialized version lags the DAG's
-  // latest (code-change + clear). User can turn it off until the dialog closes.
-  useEffect(() => {
-    if (!openDialog || userToggledRunOnLatestRef.current) {
-      return;
-    }
-    setRunOnLatestVersion(dagVersionsDiffer);
   }, [openDialog, dagVersionsDiffer]);
 
   return (
