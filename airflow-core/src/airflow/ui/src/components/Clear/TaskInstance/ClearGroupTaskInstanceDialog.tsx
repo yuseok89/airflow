@@ -120,14 +120,9 @@ export const ClearGroupTaskInstanceDialog = ({ onClose, open, taskInstance }: Pr
   useEffect(() => {
     if (!open) {
       userToggledRunOnLatestRef.current = false;
+    } else if (!userToggledRunOnLatestRef.current) {
+      setRunOnLatestVersion(dagVersionsDiffer);
     }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || userToggledRunOnLatestRef.current) {
-      return;
-    }
-    setRunOnLatestVersion(dagVersionsDiffer);
   }, [open, dagVersionsDiffer]);
 
   return (
