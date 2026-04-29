@@ -33,6 +33,7 @@ import { usePatchTaskInstance } from "src/queries/usePatchTaskInstance";
 import { isStatePending, useAutoRefresh } from "src/utils";
 
 import ClearTaskInstanceConfirmationDialog from "./ClearTaskInstanceConfirmationDialog";
+import { getRunOnLatestVersionState } from "./runOnLatestVersion";
 
 type Props = {
   readonly onClose: () => void;
@@ -108,23 +109,12 @@ const ClearTaskInstanceDialog = ({ onClose: onCloseDialog, open: openDialog, tas
     total_entries: 0,
   };
 
-  // Offer "run on latest" when bundle strings differ (versioned bundles) or when
-  // the serialized DAG version number lags the latest (e.g. local / non-versioned
-  // bundles where bundle_version may be null — matches ClearRunDialog).
-  const currentDagBundleVersion = dagDetails?.bundle_version;
-  const taskInstanceDagVersionBundleVersion = taskInstance.dag_version?.bundle_version;
-  const bundleVersionsDiffer = currentDagBundleVersion !== taskInstanceDagVersionBundleVersion;
-  const latestDagVersionNumber = dagDetails?.latest_dag_version?.version_number;
-  const taskDagVersionNumber = taskInstance.dag_version?.version_number;
-  const dagVersionsDiffer =
-    latestDagVersionNumber !== undefined &&
-    taskDagVersionNumber !== undefined &&
-    latestDagVersionNumber !== taskDagVersionNumber;
-  const shouldShowRunOnLatestOption =
-    dagVersionsDiffer ||
-    (bundleVersionsDiffer &&
-      taskInstanceDagVersionBundleVersion !== null &&
-      taskInstanceDagVersionBundleVersion !== "");
+  const { dagVersionsDiffer, shouldShowRunOnLatestOption } = getRunOnLatestVersionState({
+    latestBundleVersion: dagDetails?.bundle_version,
+    latestDagVersionNumber: dagDetails?.latest_dag_version?.version_number,
+    selectedBundleVersion: taskInstance.dag_version?.bundle_version,
+    selectedDagVersionNumber: taskInstance.dag_version?.version_number,
+  });
 
   useEffect(() => {
     if (!openDialog) {

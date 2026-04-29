@@ -31,6 +31,8 @@ import { useClearTaskInstances } from "src/queries/useClearTaskInstances";
 import { useClearTaskInstancesDryRun } from "src/queries/useClearTaskInstancesDryRun";
 import { isStatePending, useAutoRefresh } from "src/utils";
 
+import { getRunOnLatestVersionState } from "./runOnLatestVersion";
+
 type Props = {
   readonly onClose: () => void;
   readonly open: boolean;
@@ -107,15 +109,13 @@ export const ClearGroupTaskInstanceDialog = ({ onClose, open, taskInstance }: Pr
     total_entries: 0,
   };
 
-  const latestDagVersionNumber = dagDetails?.latest_dag_version?.version_number;
-  const groupDagVersionNumber = taskInstance.dag_version_number ?? undefined;
-  const dagVersionsDiffer =
-    latestDagVersionNumber !== undefined &&
-    groupDagVersionNumber !== undefined &&
-    latestDagVersionNumber !== groupDagVersionNumber;
-  // Fall back to legacy heuristic when grid summary has no version (older API).
-  const shouldShowRunOnLatestOption =
-    dagVersionsDiffer || (dagDetails?.bundle_version !== null && dagDetails?.bundle_version !== "");
+  const { dagVersionsDiffer, shouldShowRunOnLatestOption } = getRunOnLatestVersionState({
+    latestBundleVersion: dagDetails?.bundle_version,
+    latestDagVersionNumber: dagDetails?.latest_dag_version?.version_number,
+    selectedDagVersionNumber: taskInstance.dag_version_number,
+    // Fall back to legacy heuristic when grid summary has no version (older API).
+    useLatestBundleVersionAsFallback: true,
+  });
 
   useEffect(() => {
     if (!open) {
