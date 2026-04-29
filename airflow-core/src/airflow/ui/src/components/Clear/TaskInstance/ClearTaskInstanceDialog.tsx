@@ -196,6 +196,7 @@ const ClearTaskInstanceDialog = ({ onClose: onCloseDialog, open: openDialog, tas
             <ActionAccordion affectedTasks={affectedTasks} note={note} setNote={setNote} />
             <Flex
               {...(shouldShowRunOnLatestOption ? { alignItems: "center" } : {})}
+              gap={3}
               justifyContent={shouldShowRunOnLatestOption ? "space-between" : "end"}
               mt={3}
             >
