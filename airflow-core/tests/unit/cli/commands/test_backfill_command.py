@@ -18,11 +18,9 @@
 from __future__ import annotations
 
 import argparse
-import os
 from datetime import datetime
-from unittest import mock
+from types import SimpleNamespace
 
-import pendulum
 import pytest
 
 import airflow.cli.commands.backfill_command
@@ -30,18 +28,7 @@ from airflow._shared.timezones import timezone
 from airflow.cli import cli_parser
 from airflow.models.backfill import ReprocessBehavior
 
-from tests_common.test_utils.config import conf_vars
-from tests_common.test_utils.db import clear_db_backfills, clear_db_dags, clear_db_runs, parse_and_sync_to_db
-
 DEFAULT_DATE = timezone.make_aware(datetime(2015, 1, 1), timezone=timezone.utc)
-if pendulum.__version__.startswith("3"):
-    DEFAULT_DATE_REPR = DEFAULT_DATE.isoformat(sep=" ")
-else:
-    DEFAULT_DATE_REPR = DEFAULT_DATE.isoformat()
-
-# TODO: Check if tests needs side effects - locally there's missing DAG
-
-pytestmark = pytest.mark.db_test
 
 
 class TestCliBackfill:
@@ -49,196 +36,86 @@ class TestCliBackfill:
 
     @classmethod
     def setup_class(cls):
-        with conf_vars({("core", "load_examples"): "True"}):
-            parse_and_sync_to_db(os.devnull)
         cls.parser = cli_parser.get_parser()
 
-    @classmethod
-    def teardown_class(cls) -> None:
-        clear_db_runs()
-        clear_db_dags()
-        clear_db_backfills()
+    def _base_args(self) -> list[str]:
+        return [
+            "backfill",
+            "create",
+            "--dag-id",
+            "example_bash_operator",
+            "--from-date",
+            DEFAULT_DATE.isoformat(),
+            "--to-date",
+            DEFAULT_DATE.isoformat(),
+        ]
 
-    def setup_method(self):
-        clear_db_runs()  # clean-up all dag run before start each test
-        clear_db_dags()
-        clear_db_backfills()
-
-    @mock.patch("airflow.cli.commands.backfill_command._create_backfill")
     @pytest.mark.parametrize(
         ("repro", "expected_repro"),
         [
-            (None, None),
+            (None, ReprocessBehavior.NONE),
             ("none", ReprocessBehavior.NONE),
             ("completed", ReprocessBehavior.COMPLETED),
             ("failed", ReprocessBehavior.FAILED),
         ],
     )
-    def test_backfill(self, mock_create, repro, expected_repro):
-        args = [
-            "backfill",
-            "create",
-            "--dag-id",
-            "example_bash_operator",
-            "--from-date",
-            DEFAULT_DATE.isoformat(),
-            "--to-date",
-            DEFAULT_DATE.isoformat(),
-        ]
+    def test_backfill(self, mock_cli_api_client, repro, expected_repro):
+        args = self._base_args()
         if repro is not None:
-            args.extend(
-                [
-                    "--reprocess-behavior",
-                    repro,
-                ]
-            )
-        # When --run-on-latest-version is not passed, the resolver kicks in.
-        # With no DAG config and no global config set, the backfill fallback=True applies,
-        # preserving the historical default.
+            args.extend(["--reprocess-behavior", repro])
         airflow.cli.commands.backfill_command.create_backfill(self.parser.parse_args(args))
 
-        mock_create.assert_called_once_with(
-            dag_id="example_bash_operator",
-            from_date=DEFAULT_DATE,
-            to_date=DEFAULT_DATE,
-            max_active_runs=None,
-            reverse=False,
-            dag_run_conf=None,
-            reprocess_behavior=expected_repro,
-            triggering_user_name="root",
-            run_on_latest_version=True,
-        )
+        mock_cli_api_client.backfills.create.assert_called_once()
+        mock_cli_api_client.backfills.create_dry_run.assert_not_called()
+        body = mock_cli_api_client.backfills.create.call_args.kwargs["backfill"]
+        assert body.dag_id == "example_bash_operator"
+        assert body.from_date == DEFAULT_DATE
+        assert body.to_date == DEFAULT_DATE
+        assert body.run_backwards is False
+        assert body.dag_run_conf is None
+        assert body.reprocess_behavior == expected_repro
+        # Not passed on the command line; the API server resolves the fallback.
+        assert body.run_on_latest_version is None
 
-    @mock.patch("airflow.cli.commands.backfill_command._create_backfill")
-    def test_backfill_with_run_on_latest_version(self, mock_create):
-        args = [
-            "backfill",
-            "create",
-            "--dag-id",
-            "example_bash_operator",
-            "--from-date",
-            DEFAULT_DATE.isoformat(),
-            "--to-date",
-            DEFAULT_DATE.isoformat(),
-            "--run-on-latest-version",
-        ]
+    def test_backfill_with_run_on_latest_version(self, mock_cli_api_client):
+        args = [*self._base_args(), "--run-on-latest-version"]
         airflow.cli.commands.backfill_command.create_backfill(self.parser.parse_args(args))
 
-        mock_create.assert_called_once_with(
-            dag_id="example_bash_operator",
-            from_date=DEFAULT_DATE,
-            to_date=DEFAULT_DATE,
-            max_active_runs=None,
-            reverse=False,
-            dag_run_conf=None,
-            reprocess_behavior=None,
-            run_on_latest_version=True,
-            triggering_user_name="root",
-        )
+        body = mock_cli_api_client.backfills.create.call_args.kwargs["backfill"]
+        assert body.run_on_latest_version is True
 
-    @mock.patch("airflow.cli.commands.backfill_command._do_dry_run")
-    @pytest.mark.parametrize(
-        "reverse",
-        [False, True],
-    )
-    def test_backfill_dry_run(self, mock_dry_run, reverse):
-        args = [
-            "backfill",
-            "create",
-            "--dag-id",
-            "example_bash_operator",
-            "--from-date",
-            DEFAULT_DATE.isoformat(),
-            "--to-date",
-            DEFAULT_DATE.isoformat(),
-            "--dry-run",
-            "--reprocess-behavior",
-            "none",
-        ]
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_backfill_dry_run(self, mock_cli_api_client, reverse):
+        mock_cli_api_client.backfills.create_dry_run.return_value = SimpleNamespace(
+            backfills=[SimpleNamespace(logical_date=DEFAULT_DATE, partition_key=None, partition_date=None)]
+        )
+        args = [*self._base_args(), "--dry-run", "--reprocess-behavior", "none"]
         if reverse:
             args.append("--run-backwards")
         airflow.cli.commands.backfill_command.create_backfill(self.parser.parse_args(args))
 
-        mock_dry_run.assert_called_once_with(
-            dag_id="example_bash_operator",
-            from_date=DEFAULT_DATE.replace(tzinfo=timezone.utc),
-            to_date=DEFAULT_DATE.replace(tzinfo=timezone.utc),
-            reverse=reverse,
-            reprocess_behavior="none",
-            session=mock.ANY,
-        )
+        mock_cli_api_client.backfills.create_dry_run.assert_called_once()
+        mock_cli_api_client.backfills.create.assert_not_called()
+        body = mock_cli_api_client.backfills.create_dry_run.call_args.kwargs["backfill"]
+        assert body.run_backwards is reverse
+        assert body.reprocess_behavior == ReprocessBehavior.NONE
 
-    @mock.patch("airflow.cli.commands.backfill_command._create_backfill")
-    def test_backfill_with_dag_run_conf(self, mock_create):
-        """Test that dag_run_conf is properly parsed from JSON string."""
-        args = [
-            "backfill",
-            "create",
-            "--dag-id",
-            "example_bash_operator",
-            "--from-date",
-            DEFAULT_DATE.isoformat(),
-            "--to-date",
-            DEFAULT_DATE.isoformat(),
-            "--dag-run-conf",
-            '{"example_key": "example_value"}',
-        ]
+    def test_backfill_with_dag_run_conf(self, mock_cli_api_client):
+        args = [*self._base_args(), "--dag-run-conf", '{"example_key": "example_value"}']
         airflow.cli.commands.backfill_command.create_backfill(self.parser.parse_args(args))
 
-        mock_create.assert_called_once_with(
-            dag_id="example_bash_operator",
-            from_date=DEFAULT_DATE,
-            to_date=DEFAULT_DATE,
-            max_active_runs=None,
-            reverse=False,
-            dag_run_conf={"example_key": "example_value"},
-            reprocess_behavior=None,
-            triggering_user_name="root",
-            run_on_latest_version=True,
-        )
+        body = mock_cli_api_client.backfills.create.call_args.kwargs["backfill"]
+        assert body.dag_run_conf == {"example_key": "example_value"}
 
-    def test_backfill_with_invalid_dag_run_conf(self):
-        """Test that invalid JSON in dag_run_conf raises ValueError."""
-        args = [
-            "backfill",
-            "create",
-            "--dag-id",
-            "example_bash_operator",
-            "--from-date",
-            DEFAULT_DATE.isoformat(),
-            "--to-date",
-            DEFAULT_DATE.isoformat(),
-            "--dag-run-conf",
-            '{"invalid": json}',  # Invalid JSON
-        ]
+    def test_backfill_with_invalid_dag_run_conf(self, mock_cli_api_client):
+        args = [*self._base_args(), "--dag-run-conf", '{"invalid": json}']
         with pytest.raises(ValueError, match="Invalid JSON in --dag-run-conf"):
             airflow.cli.commands.backfill_command.create_backfill(self.parser.parse_args(args))
+        mock_cli_api_client.backfills.create.assert_not_called()
 
-    @mock.patch("airflow.cli.commands.backfill_command._create_backfill")
-    def test_backfill_with_empty_dag_run_conf(self, mock_create):
-        """Test that empty dag_run_conf is properly parsed."""
-        args = [
-            "backfill",
-            "create",
-            "--dag-id",
-            "example_bash_operator",
-            "--from-date",
-            DEFAULT_DATE.isoformat(),
-            "--to-date",
-            DEFAULT_DATE.isoformat(),
-            "--dag-run-conf",
-            "{}",
-        ]
+    def test_backfill_with_empty_dag_run_conf(self, mock_cli_api_client):
+        args = [*self._base_args(), "--dag-run-conf", "{}"]
         airflow.cli.commands.backfill_command.create_backfill(self.parser.parse_args(args))
 
-        mock_create.assert_called_once_with(
-            dag_id="example_bash_operator",
-            from_date=DEFAULT_DATE,
-            to_date=DEFAULT_DATE,
-            max_active_runs=None,
-            reverse=False,
-            dag_run_conf={},
-            reprocess_behavior=None,
-            triggering_user_name="root",
-            run_on_latest_version=True,
-        )
+        body = mock_cli_api_client.backfills.create.call_args.kwargs["backfill"]
+        assert body.dag_run_conf == {}

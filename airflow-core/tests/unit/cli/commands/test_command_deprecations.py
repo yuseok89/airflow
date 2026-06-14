@@ -30,7 +30,7 @@ import re
 
 import pytest
 
-from airflow.cli.commands import asset_command, dag_command, pool_command
+from airflow.cli.commands import asset_command, backfill_command, dag_command, pool_command
 from airflow.exceptions import RemovedInAirflow4Warning
 
 # (command callable, argv to parse, expected airflowctl replacement named in the warning)
@@ -51,6 +51,11 @@ DEPRECATED_CLI_COMMANDS = [
         asset_command.asset_materialize,
         ["assets", "materialize", "--name=foo"],
         "airflowctl assets materialize",
+    ),
+    (
+        backfill_command.create_backfill,
+        ["backfill", "create", "--dag-id", "foo", "--from-date", "2024-01-01", "--to-date", "2024-01-02"],
+        "airflowctl backfill create",
     ),
 ]
 

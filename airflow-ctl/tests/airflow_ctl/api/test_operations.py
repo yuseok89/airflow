@@ -75,6 +75,8 @@ from airflowctl.api.datamodels.generated import (
     DAGWarningCollectionResponse,
     DAGWarningResponse,
     DagWarningType,
+    DryRunBackfillCollectionResponse,
+    DryRunBackfillResponse,
     ImportErrorCollectionResponse,
     ImportErrorResponse,
     JobCollectionResponse,
@@ -461,6 +463,10 @@ class TestBackfillOperations:
         backfills=[backfill_response],
         total_entries=1,
     )
+    dry_run_collection_response = DryRunBackfillCollectionResponse(
+        backfills=[DryRunBackfillResponse(logical_date=datetime.datetime(2025, 1, 1, 0, 0, 0))],
+        total_entries=1,
+    )
 
     def test_create(self):
         expected_body = self.backfill_body.model_dump(mode="json", exclude_none=True)
@@ -482,11 +488,11 @@ class TestBackfillOperations:
             assert request.url.path == "/api/v2/backfills/dry_run"
             assert request.headers.get("content-type", "").startswith("application/json")
             assert json.loads(request.content.decode()) == expected_body
-            return httpx.Response(200, json=json.loads(self.backfill_response.model_dump_json()))
+            return httpx.Response(200, json=json.loads(self.dry_run_collection_response.model_dump_json()))
 
         client = make_api_client(transport=httpx.MockTransport(handle_request))
         response = client.backfills.create_dry_run(backfill=self.backfill_body)
-        assert response == self.backfill_response
+        assert response == self.dry_run_collection_response
 
     def test_get(self):
         def handle_request(request: httpx.Request) -> httpx.Response:

@@ -56,6 +56,7 @@ from airflowctl.api.datamodels.generated import (
     DAGVersionCollectionResponse,
     DagVersionResponse,
     DAGWarningCollectionResponse,
+    DryRunBackfillCollectionResponse,
     ImportErrorCollectionResponse,
     ImportErrorResponse,
     JobCollectionResponse,
@@ -360,13 +361,15 @@ class BackfillOperations(BaseOperations):
         except ServerResponseError as e:
             raise e
 
-    def create_dry_run(self, backfill: BackfillPostBody) -> BackfillResponse | ServerResponseError:
+    def create_dry_run(
+        self, backfill: BackfillPostBody
+    ) -> DryRunBackfillCollectionResponse | ServerResponseError:
         """Create a dry run backfill."""
         try:
             self.response = self.client.post(
                 "backfills/dry_run", json=backfill.model_dump(mode="json", exclude_none=True)
             )
-            return BackfillResponse.model_validate_json(self.response.content)
+            return DryRunBackfillCollectionResponse.model_validate_json(self.response.content)
         except ServerResponseError as e:
             raise e
 
