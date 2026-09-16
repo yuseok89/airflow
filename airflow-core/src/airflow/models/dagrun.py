@@ -1026,7 +1026,7 @@ class DagRun(Base, LoggingMixin):
             session.execute(
                 update(DagModel)
                 .where(or_(*filter_query))
-                .values(is_paused=True)
+                .values(is_paused=True, is_draining=False)
                 .execution_options(synchronize_session="fetch")
             )
             session.add(
@@ -1799,9 +1799,6 @@ class DagRun(Base, LoggingMixin):
             else:
                 true_delay = first_start_date - self.run_after
                 if true_delay.total_seconds() > 0:
-                    stats.timing(
-                        f"dagrun.{dag.dag_id}.first_task_scheduling_delay", true_delay, tags=self.stats_tags
-                    )
                     stats.timing("dagrun.first_task_scheduling_delay", true_delay, tags=self.stats_tags)
                 if self.queued_at is not None:
                     start_delay = first_start_date - self.queued_at
